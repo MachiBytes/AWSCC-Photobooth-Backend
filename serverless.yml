@@ -1,0 +1,125 @@
+service: awscc-photobooth
+frameworkVersion: "3"
+
+provider:
+    name: aws
+    runtime: python3.8
+    profile: awscc-backend
+    region: ap-southeast-1
+    timeout: 16
+    memorySize: 256
+    environment:
+        TABLE: awscc-photobooth
+        BUCKET: awscc-photobooth
+        SECRET_TOKEN: 230b9b2883da2ab864be6cc230814956069966cd2e0d9e79f12d8b428b1e2eb7
+    deploymentBucket:
+        name: awscc-photobooth
+        blockPublicAccess: true
+    iam:
+        role:
+            name: awscc-photobooth-role
+            statements:
+                - Effect: "Allow"
+                  Action:
+                      - "dynamodb:*"
+                      - "s3:*"
+                      - "lambda:*"
+                      - "ses:*"
+                      - "cloudwatch:*"
+                  Resource:
+                      - "*"
+    layers:
+        - arn:aws:lambda:ap-southeast-1:876497563387:layer:pythonDependencies:3
+    cors:
+        allowedOrigins:
+            - http://localhost:3000
+            - http://localhost:3000/admin
+        allowedHeaders:
+            - Content-Type
+            - Authorization
+        allowedMethods:
+            - GET
+            - POST
+            - DELETE
+        allowCredentials: true
+    httpApi:
+        authorizers:
+            customAuthorizer:
+                type: request
+                identitySource:
+                    - $request.header.Authorization
+                functionName: tokenAuthorizer
+
+functions:
+    tokenAuthorizer:
+        handler: src/authorizers/tokenAuthorizer.handler
+
+    hello:
+        handler: src/hello.handler
+        events:
+            - httpApi:
+                  path: /hello
+                  method: get
+                  authorizer:
+                      name: customAuthorizer
+
+    create_request:
+        handler: src/create_request.handler
+        events:
+            - httpApi:
+                  path: /create_request
+                  method: post
+                  authorizer:
+                      name: customAuthorizer
+
+    delete_request:
+        handler: src/delete_request.handler
+        events:
+            - httpApi:
+                  path: /delete_request
+                  method: post
+                  authorizer:
+                      name: customAuthorizer
+
+    get_requests:
+        handler: src/get_requests.handler
+        events:
+            - httpApi:
+                  path: /get_requests
+                  method: get
+                  authorizer:
+                      name: customAuthorizer
+
+    template_pictures:
+        handler: src/template_pictures.handler
+        events:
+            - httpApi:
+                  path: /template_pictures
+                  method: post
+                  authorizer:
+                      name: customAuthorizer
+        memorySize: 3000
+        timeout: 30
+
+    send_email:
+        handler: src/send_email.handler
+        events:
+            - httpApi:
+                  path: /send_email
+                  method: post
+                  authorizer:
+                      name: customAuthorizer
+
+package:
+    patterns:
+        - "!venv/**"
+        - "!node_modules/**"
+        - "!package-lock.json"
+        - "!package.json"
+        - "!scratch_files/**"
+        - "!requirements.txt"
+        - "!.git"
+
+plugins:
+    - serverless-python-requirements
+    - serverless-deployment-bucket
