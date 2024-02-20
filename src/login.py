@@ -29,8 +29,8 @@ def check_credentials(event_body):
         for entry in item["user_list"]:
             if entry["username"] == username:
                 if entry["password"] == encrypted_password:
-                    # entry["last_logged_in"] = datetime.datetime.utcnow()
-                    # table.put_item(Item={"requestId": "credentials", "user_list": item["user_list"]})
+                    entry["last_logged_in"] = str(datetime.datetime.utcnow())
+                    table.put_item(Item={"requestId": "credentials", "user_list": item["user_list"]})
                     return generate_jwt(username)
                 else:
                     raise Exception("Password is incorrect.")
