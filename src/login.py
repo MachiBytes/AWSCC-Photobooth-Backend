@@ -43,7 +43,7 @@ def check_credentials(event_body):
 
 def generate_jwt(username):
     payload = {
-        "name": username,
+        "sub": username,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=12),
     }
     jwt_token = jwt.encode(payload, secret_token, "HS256")
