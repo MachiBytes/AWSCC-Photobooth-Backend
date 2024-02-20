@@ -70,8 +70,6 @@ functions:
             - httpApi:
                   path: /login
                   method: post
-                  authorizer:
-                      name: customAuthorizer
 
     create_request:
         handler: src/create_request.handler
