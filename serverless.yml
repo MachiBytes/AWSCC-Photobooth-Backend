@@ -9,7 +9,7 @@ provider:
     timeout: 16
     memorySize: 256
     environment:
-        TABLE: awscc-photobooth
+        TABLE: awscc-photobooth-app
         BUCKET: awscc-photobooth
         SECRET_TOKEN: 230b9b2883da2ab864be6cc230814956069966cd2e0d9e79f12d8b428b1e2eb7
     deploymentBucket:
@@ -29,7 +29,8 @@ provider:
                   Resource:
                       - "*"
     layers:
-        - arn:aws:lambda:ap-southeast-1:876497563387:layer:pythonDependencies:3
+        - arn:aws:lambda:ap-southeast-1:876497563387:layer:PhotoboothAppDependencies:2
+        - arn:aws:lambda:ap-southeast-1:876497563387:layer:PyJWT:1
     cors:
         allowedOrigins:
             - http://localhost:3000
@@ -60,6 +61,15 @@ functions:
             - httpApi:
                   path: /hello
                   method: get
+                  authorizer:
+                      name: customAuthorizer
+
+    login:
+        handler: src/login.handler
+        events:
+            - httpApi:
+                  path: /login
+                  method: post
                   authorizer:
                       name: customAuthorizer
 
