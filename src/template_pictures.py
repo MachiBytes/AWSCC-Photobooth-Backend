@@ -1,5 +1,9 @@
 """
-Accepts a folder name and iterates over all files in that folder, puts it in a template, and uploads them to the appropriate S3 folder.
+Triggered when an object is uploaded to awscc-photobooth/raw_photos
+
+Payload:
+- S3 Event Trigger
+- 
 
 Process
 1. Access the template from S3 and read as a string
@@ -16,36 +20,57 @@ from PIL import Image
 from io import BytesIO
 
 s3 = boto3.client("s3")
+s3_resource = boto3.resource("s3")
+bucket = s3_resource.Bucket(os.environ["BUCKET"])
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TABLE"])
 lambda_client = boto3.client("lambda")
 
 
-def template_image(event_body):
-    folder_name = event_body["folderName"]
-    FRAME_URL = "https://awscc-photobooth-app.s3.ap-southeast-1.amazonaws.com/assets/PSD-frame.png"
-    BUCKET_URL = "https://awscc-photobooth-app.s3.ap-southeast-1.amazonaws.com"
+def template_image(event):
+    """
+    - Get bucket and key
+    - Create a template with Pillow Image
+    - Process templating
+    """
+    # Get bucket, key
+    FRAME_URL = "https://awscc-photobooth.s3.ap-southeast-1.amazonaws.com/assets/DBM-ICT-Week-Frame.png"
+    BUCKET_URL = "https://awscc-photobooth.s3.ap-southeast-1.amazonaws.com"
+    BUCKET = event["Records"][0]["s3"]["bucket"]["name"]
+    full_key = event["Records"][0]["s3"]["object"]["key"]
+    list_full_key = full_key.split("/")
+    list_full_key.pop(0)
+    KEY = "/".join(list_full_key)
+    OBJECT_URL = f"{BUCKET_URL}/{full_key}"
+    print(OBJECT_URL, BUCKET, KEY)
 
-    template = Image.open(BytesIO(requests.get(FRAME_URL).content))
-
-    response = s3.list_objects_v2(Bucket="awscc-photobooth-app", Prefix=f"raw_photos/{folder_name}")
-    image_keys = [image for image in response["Contents"] if image["Key"] != f"raw_photos/{folder_name}/"]
+    # Create a template
+    print("Starting")
+    response = requests.get(FRAME_URL)
+    print(response)
+    template = Image.open(BytesIO(response.content))
     offset = (350, 175)
-    image_resize = (3000, 2000)
+    image_resize = (5350, 3000)
 
-    for index, image in enumerate(image_keys):
-        file_name = f"/tmp/{index+1}.png"
-        image = Image.open(BytesIO(requests.get(f"{BUCKET_URL}/{image['Key']}").content))
-        image = image.resize(image_resize)
-        template.paste(image, offset)
-        template.save(file_name)
-        s3.upload_file(Filename=file_name, Bucket=os.environ["BUCKET"], Key=f"templated_photos/{folder_name}/{file_name[5:]}")
-        os.remove(file_name)
+    # Get object
+    response = requests.get(OBJECT_URL)
+    print(response)
+
+    # Process templating
+    buffer = BytesIO()
+    image = Image.open(BytesIO(response.content))
+    image = image.resize(image_resize)
+    template.paste(image, offset)
+    template.save(buffer, "PNG")
+    buffer.seek(0)
+    response = bucket.put_object(Key=f"templated_photos/{KEY}", Body=buffer)
+    print(response)
+    print("Finished!")
 
 
-def update_status(event_body):
-    request_id = event_body["requestId"]
-    folder_name = event_body["folderName"]
+def update_status(event):
+    request_id = event["requestId"]
+    folder_name = event["folderName"]
     item = table.get_item(Key={"requestId": request_id})["Item"]
     item["status"] = "templated"
     item["imagePath"] = f"templated_photos/{folder_name}"
@@ -53,27 +78,29 @@ def update_status(event_body):
 
 
 def handler(event, context):
-    event_body = json.loads(event.get("body"))
+    try:
+        print(event)
 
-    # Template and upload the templated image to S3
-    template_image(event_body)
+        # Business Logic
+        # Template the image
+        template_image(event)
 
-    # Update status in DynamoDb
-    update_status(event_body)
+        # Update the status in DynamoDB
 
-    # Invoke send_email lambda function
-    # lambda_client.invoke(
-    #     FunctionName="send_email",
-    #     InvocationType="Event",
-    #     Payload=json.dumps({"requestId": event_body["requestId"]})
-    # )
+        # Invoke send_email function
+
+        status_code = 200
+        message = "Successful."
+    except Exception as e:
+        status_code = 400
+        message = "An error occured. " + str(e)
 
     body = {
-        "message": "Image successfully templated and uploaded",
-        "event": event_body,
+        "message": message,
+        "event": event,
     }
     response = {
-        "statusCode": 200,
+        "statusCode": status_code,
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",  # This allows CORS from any origin
