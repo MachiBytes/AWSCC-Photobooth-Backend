@@ -50,6 +50,13 @@ functions:
                   path: /hello
                   method: get
 
+    register:
+        handler: src/register.handler
+        events:
+            - httpApi:
+                  path: /register
+                  method: post
+
     login:
         handler: src/login.handler
         events:
