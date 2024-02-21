@@ -85,6 +85,13 @@ functions:
                   path: /get_requests
                   method: get
 
+    generate_presigned:
+        handler: src/generate_presigned.handler
+        events:
+            - httpApi:
+                  path: /generate_presigned
+                  method: post
+
     template_pictures:
         handler: src/template_pictures.handler
         events:
