@@ -1,6 +1,7 @@
 """
 Takes in the requestId and deletes the record from the database
 """
+
 import os
 import json
 import boto3
@@ -13,7 +14,7 @@ def delete_request(requestId):
     item = table.get_item(Key={"requestId": requestId}).get("Item", None)
     if not item:
         return "Item doesn't exist."
-    item["status"] = "canceled"
+    item["status"] = "cancelled"
     table.put_item(Item=item)
     return "Request deleted successfully!"
 
@@ -28,11 +29,11 @@ def handler(event, context):
         "event": event_body,
     }
     response = {
-        "statusCode": 200, 
+        "statusCode": 200,
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",  # This allows CORS from any origin
         },
-        "body": json.dumps(body)
+        "body": json.dumps(body),
     }
     return response

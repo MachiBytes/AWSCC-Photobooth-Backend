@@ -9,7 +9,7 @@ def handler(event, context):
         message = "Successful."
     except Exception as e:
         status_code = 400
-        message = "An error occured. " + e
+        message = "An error occured. " + str(e)
 
     body = {
         "message": message,

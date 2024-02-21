@@ -31,18 +31,6 @@ provider:
     layers:
         - arn:aws:lambda:ap-southeast-1:876497563387:layer:PhotoboothAppDependencies:2
         - arn:aws:lambda:ap-southeast-1:876497563387:layer:PyJWT:1
-    cors:
-        allowedOrigins:
-            - http://localhost:3000
-            - http://localhost:3000/admin
-        allowedHeaders:
-            - Content-Type
-            - Authorization
-        allowedMethods:
-            - GET
-            - POST
-            - DELETE
-        allowCredentials: true
     httpApi:
         authorizers:
             customAuthorizer:
@@ -61,8 +49,6 @@ functions:
             - httpApi:
                   path: /hello
                   method: get
-                  authorizer:
-                      name: customAuthorizer
 
     login:
         handler: src/login.handler
@@ -77,8 +63,6 @@ functions:
             - httpApi:
                   path: /create_request
                   method: post
-                  authorizer:
-                      name: customAuthorizer
 
     delete_request:
         handler: src/delete_request.handler
@@ -86,8 +70,6 @@ functions:
             - httpApi:
                   path: /delete_request
                   method: post
-                  authorizer:
-                      name: customAuthorizer
 
     get_requests:
         handler: src/get_requests.handler
@@ -95,8 +77,6 @@ functions:
             - httpApi:
                   path: /get_requests
                   method: get
-                  authorizer:
-                      name: customAuthorizer
 
     template_pictures:
         handler: src/template_pictures.handler
@@ -104,8 +84,6 @@ functions:
             - httpApi:
                   path: /template_pictures
                   method: post
-                  authorizer:
-                      name: customAuthorizer
         memorySize: 3000
         timeout: 30
 
@@ -115,8 +93,6 @@ functions:
             - httpApi:
                   path: /send_email
                   method: post
-                  authorizer:
-                      name: customAuthorizer
 
 package:
     patterns:
