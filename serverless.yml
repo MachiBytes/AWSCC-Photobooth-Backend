@@ -95,9 +95,13 @@ functions:
     template_pictures:
         handler: src/template_pictures.handler
         events:
-            - httpApi:
-                  path: /template_pictures
-                  method: post
+            - s3:
+                  bucket: ${self:provider.environment.BUCKET}
+                  event: "s3:ObjectCreated:*"
+                  rules:
+                      - prefix: raw_photos/
+                  existing: true
+                  forceDeploy: true
         memorySize: 3000
         timeout: 30
 
