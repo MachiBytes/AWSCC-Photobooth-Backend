@@ -24,7 +24,6 @@ s3_resource = boto3.resource("s3")
 bucket = s3_resource.Bucket(os.environ["BUCKET"])
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TABLE"])
-lambda_client = boto3.client("lambda")
 
 
 def template_image(event):
@@ -73,14 +72,19 @@ def template_image(event):
 def update_status(request_id):
     # Get number of objects in folder
     response = s3.list_objects_v2(Bucket=os.environ["BUCKET"], Prefix=f"templated_photos/{request_id}")
-    print(response, response["KeyCount"])
+    key_count = response["KeyCount"]
+    print(key_count, response)
 
     # Update status
     item = table.get_item(Key={"requestId": request_id})["Item"]
-    item["status"] = f"templated: {response['KeyCount']}"
+    if item["status"] == "sent":
+        print("This item has already been sent.")
+        return 4
+    item["status"] = f"templated: {key_count}"
     item["imagePath"] = f"templated_photos/{request_id}"
     print(item)
     table.put_item(Item=item)
+    return key_count
 
 
 def handler(event, context):
@@ -92,7 +96,15 @@ def handler(event, context):
         request_id = template_image(event)
 
         # Update the status in DynamoDB
-        update_status(request_id)
+        key_count = update_status(request_id)
+
+        # Invoke email_sender if key_count == 3
+        if key_count == 3:
+            print("It got here")
+            payload = {"requestId": request_id}
+            url = f"{os.environ['API_URL']}/send_email"
+            response = requests.post(url=url, json=payload)
+            print(response)
 
         status_code = 200
         message = "Successful."

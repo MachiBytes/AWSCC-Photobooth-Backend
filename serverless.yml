@@ -12,6 +12,7 @@ provider:
         TABLE: awscc-photobooth-app
         BUCKET: awscc-photobooth
         SECRET_TOKEN: 230b9b2883da2ab864be6cc230814956069966cd2e0d9e79f12d8b428b1e2eb7
+        API_URL: https://08np3d0io7.execute-api.ap-southeast-1.amazonaws.com
     deploymentBucket:
         name: awscc-photobooth
         blockPublicAccess: true
