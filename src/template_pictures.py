@@ -40,17 +40,18 @@ def template_image(event):
     full_key = event["Records"][0]["s3"]["object"]["key"]
     list_full_key = full_key.split("/")
     list_full_key.pop(0)
+    REQUEST_ID = list_full_key[0]
     KEY = "/".join(list_full_key)
     OBJECT_URL = f"{BUCKET_URL}/{full_key}"
-    print(OBJECT_URL, BUCKET, KEY)
+    print(OBJECT_URL, BUCKET, REQUEST_ID, KEY)
 
     # Create a template
     print("Starting")
     response = requests.get(FRAME_URL)
     print(response)
     template = Image.open(BytesIO(response.content))
-    offset = (350, 175)
-    image_resize = (5350, 3000)
+    offset = (275, 175)
+    image_resize = (4288, 2848)
 
     # Get object
     response = requests.get(OBJECT_URL)
@@ -66,14 +67,19 @@ def template_image(event):
     response = bucket.put_object(Key=f"templated_photos/{KEY}", Body=buffer)
     print(response)
     print("Finished!")
+    return REQUEST_ID
 
 
-def update_status(event):
-    request_id = event["requestId"]
-    folder_name = event["folderName"]
+def update_status(request_id):
+    # Get number of objects in folder
+    response = s3.list_objects_v2(Bucket=os.environ["BUCKET"], Prefix=f"templated_photos/{request_id}")
+    print(response, response["KeyCount"])
+
+    # Update status
     item = table.get_item(Key={"requestId": request_id})["Item"]
-    item["status"] = "templated"
-    item["imagePath"] = f"templated_photos/{folder_name}"
+    item["status"] = f"templated: {response['KeyCount']}"
+    item["imagePath"] = f"templated_photos/{request_id}"
+    print(item)
     table.put_item(Item=item)
 
 
@@ -83,11 +89,10 @@ def handler(event, context):
 
         # Business Logic
         # Template the image
-        template_image(event)
+        request_id = template_image(event)
 
         # Update the status in DynamoDB
-
-        # Invoke send_email function
+        update_status(request_id)
 
         status_code = 200
         message = "Successful."
